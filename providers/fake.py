@@ -23,10 +23,18 @@ class FakeLlm:
         self.done = False
         self.seen_user: str | None = None
         self.seen_history: list[dict[str, str]] | None = None
+        self.seen_system: str | None = None
 
-    async def stream(self, history: list[dict[str, str]], user_text: str):
+    async def stream(
+        self,
+        history: list[dict[str, str]],
+        user_text: str,
+        *,
+        system_prompt: str = "",
+    ):
         self.seen_user = user_text
         self.seen_history = list(history)
+        self.seen_system = system_prompt
         try:
             for char in self.text:
                 await asyncio.sleep(self.delay)
@@ -38,6 +46,7 @@ class FakeLlm:
 class FakeTts:
     def __init__(self) -> None:
         self.texts: list[str] = []
+        self.sample_rate = 24000
 
     async def synthesize(self, text: str) -> bytes:
         self.texts.append(text)

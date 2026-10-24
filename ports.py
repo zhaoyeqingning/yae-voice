@@ -29,8 +29,14 @@ class Asr(Protocol):
 
 
 class Llm(Protocol):
-    def stream(self, history: list[dict[str, str]], user_text: str) -> AsyncIterator[str]:
-        """按增量吐出回复的字。"""
+    def stream(
+        self,
+        history: list[dict[str, str]],
+        user_text: str,
+        *,
+        system_prompt: str = "",
+    ) -> AsyncIterator[str]:
+        """按增量吐出回复的字。system_prompt 由 Session 初始化时带入。"""
 
 
 class Tts(Protocol):
