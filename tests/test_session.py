@@ -45,3 +45,24 @@ def test_finished_turn_keeps_the_reply_that_started_playback():
         assert [item["text"] for item in session.history] == ["语音内容。", "好。"]
 
     asyncio.run(scenario())
+
+
+def test_begin_text_returns_generation_and_new_text_cancels():
+    async def scenario() -> None:
+        tts = GatedTts()
+        session = Session(
+            FakeAsr(),
+            FakeLlm("你好。后面还有一句。"),
+            tts,
+            FakePlayer(),
+            system_prompt="你是助手。",
+        )
+        first_gen = await session.begin_text("第一轮")
+        assert first_gen == 1
+        await asyncio.wait_for(tts.started.wait(), timeout=2)
+        second_gen = await session.begin_text("第二轮")
+        assert second_gen == 2
+        tts.release.set()
+        await asyncio.wait_for(session._await_generation(2), timeout=2)
+
+    asyncio.run(scenario())
