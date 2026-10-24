@@ -1,4 +1,4 @@
-from audio.mic import resample_pcm16
+from audio.resample import resample_pcm16
 from audio.vad import SAMPLE_RATE
 
 

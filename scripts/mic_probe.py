@@ -18,9 +18,9 @@ from audio.mic import (
     list_input_devices,
     pick_input_rate,
     prefer_headset_input,
-    resample_pcm16,
     rms_int16,
 )
+from audio.resample import resample_pcm16
 from audio.vad import SAMPLE_RATE, SileroVad, choose_vad
 
 MODEL = ROOT / "models" / "silero_vad.onnx"
