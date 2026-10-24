@@ -1,1 +1,11 @@
 pytest==8.4.2
+httpx==0.28.1
+websockets==15.0.1
+python-dotenv==1.1.1
+webrtcvad==2.0.10
+onnxruntime==1.31.0
+sounddevice==0.5.6
+numpy>=2.0.0
+fastapi==0.115.12
+uvicorn[standard]==0.34.2
+# webrtcvad 可选；若本机旧版 setuptools 无 pkg_resources，代码内已有兼容桩
