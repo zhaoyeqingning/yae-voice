@@ -21,8 +21,12 @@ def test_each_turn_appends_a_timing_line(tmp_path):
         record = json.loads(log_path.read_text(encoding="utf-8"))
         assert record["cancelled"] is False
         assert record["stale_audio_played"] == 0
+        assert record["input"] == "text"
+        assert record["generation"] == 1
         assert record["user_text"] == "在吗"
         assert record["spoken_text"] == "你好。我在。"
+        assert record["assistant_text"] == "你好。我在。"
+        assert record["tts_pieces"] == ["你好。", "我在。"]
         assert record["listen_ms"] is not None
         assert record["think_ms"] is not None
         assert record["speak_ms"] is not None
