@@ -2,14 +2,13 @@
 
 from __future__ import annotations
 
-SENTENCE_ENDS = "。！？\n"
+# 句末 + 分号/逗号；不做「满 N 字强制切」
+SENTENCE_ENDS = "。！？\n.?!；，,"
 
 
 class Chunker:
-    def __init__(self, first_limit: int = 20) -> None:
-        self.first_limit = first_limit
+    def __init__(self) -> None:
         self._buffer = ""
-        self._first_piece = True
 
     def push(self, delta: str) -> list[str]:
         self._buffer += delta
@@ -34,12 +33,9 @@ class Chunker:
         ends = [index for index in ends if index >= 0]
         if ends:
             cut = min(ends) + 1
-        elif self._first_piece and len(self._buffer) >= self.first_limit:
-            cut = self.first_limit
         elif final:
             cut = len(self._buffer)
         else:
             return None
         piece, self._buffer = self._buffer[:cut], self._buffer[cut:]
-        self._first_piece = False
         return piece
