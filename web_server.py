@@ -40,18 +40,16 @@ state = AppState()
 async def _build_live_session(player: HubPlayer, system_prompt: str) -> Session:
     from live_smoke import resolve_model
     from providers.config import load_settings
+    from providers.factory import build_tts, tts_label
     from providers.openlux_llm import OpenluxLlm
-    from providers.openlux_tts import OpenluxTts
     from providers.xfyun_asr import XfyunAsr
 
     settings = load_settings()
     model = await resolve_model(
         settings.llm_base_url, settings.llm_api_key, settings.llm_model
     )
-    print(
-        f"LLM model={model} TTS={settings.tts_model} voice={settings.tts_voice} speed={settings.tts_speed}",
-        flush=True,
-    )
+    tts = build_tts(settings)
+    print(f"LLM model={model} TTS {tts_label(settings)}", flush=True)
     return Session(
         XfyunAsr(
             app_id=settings.xfyun_app_id,
@@ -64,14 +62,7 @@ async def _build_live_session(player: HubPlayer, system_prompt: str) -> Session:
             model=model,
             enable_thinking=settings.llm_enable_thinking,
         ),
-        OpenluxTts(
-            api_key=settings.llm_api_key,
-            base_url=settings.llm_base_url,
-            model=settings.tts_model,
-            voice=settings.tts_voice,
-            speed=settings.tts_speed,
-            instructions=settings.tts_instructions,
-        ),
+        tts,
         player,
         log_path=ROOT / "runs" / "web_turns.jsonl",
         system_prompt=system_prompt,

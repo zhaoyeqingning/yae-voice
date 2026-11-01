@@ -34,6 +34,19 @@ class Settings:
     tts_voice: str
     tts_speed: float
     tts_instructions: str
+    # 引擎选择：openlux（默认，OpenAI 兼容）/ cosyvoice / doubao
+    tts_provider: str = "openlux"
+    dashscope_api_key: str = ""
+    cosyvoice_model: str = "cosyvoice-v2"
+    cosyvoice_voice: str = "longxiaochun_v2"
+    cosyvoice_sample_rate: int = 24000
+    cosyvoice_rate: float | None = None
+    cosyvoice_volume: int = 50
+    doubao_api_key: str = ""
+    doubao_speaker: str = "zh_female_gaolengyujie_uranus_bigtts"
+    doubao_resource_id: str = "seed-tts-2.0"
+    doubao_sample_rate: int = 24000
+    doubao_context: str = ""
 
 
 def load_settings(env_file: Path | None = None) -> Settings:
@@ -57,6 +70,24 @@ def load_settings(env_file: Path | None = None) -> Settings:
         tts_voice=os.getenv("TTS_VOICE", "shimmer").strip() or "shimmer",
         tts_speed=_tts_speed(os.getenv("TTS_SPEED", "1.15")),
         tts_instructions=_tts_instructions(os.getenv("TTS_INSTRUCTIONS")),
+        tts_provider=(os.getenv("TTS_PROVIDER", "openlux").strip() or "openlux").lower(),
+        dashscope_api_key=os.getenv("DASHSCOPE_API_KEY", "").strip(),
+        cosyvoice_model=os.getenv("COSYVOICE_MODEL", "cosyvoice-v2").strip()
+        or "cosyvoice-v2",
+        cosyvoice_voice=os.getenv("COSYVOICE_VOICE", "longxiaochun_v2").strip()
+        or "longxiaochun_v2",
+        cosyvoice_sample_rate=_int(os.getenv("COSYVOICE_SAMPLE_RATE"), 24000),
+        cosyvoice_rate=_optional_float(os.getenv("COSYVOICE_RATE")),
+        cosyvoice_volume=_int(os.getenv("COSYVOICE_VOLUME"), 50),
+        doubao_api_key=os.getenv("DOUBAO_API_KEY", "").strip(),
+        doubao_speaker=os.getenv(
+            "DOUBAO_SPEAKER", "zh_female_gaolengyujie_uranus_bigtts"
+        ).strip()
+        or "zh_female_gaolengyujie_uranus_bigtts",
+        doubao_resource_id=os.getenv("DOUBAO_RESOURCE_ID", "seed-tts-2.0").strip()
+        or "seed-tts-2.0",
+        doubao_sample_rate=_int(os.getenv("DOUBAO_SAMPLE_RATE"), 24000),
+        doubao_context=os.getenv("DOUBAO_CONTEXT", "").strip(),
     )
     missing = [
         name
@@ -71,6 +102,23 @@ def load_settings(env_file: Path | None = None) -> Settings:
     if missing:
         raise RuntimeError(f"缺少环境变量: {', '.join(missing)}")
     return settings
+
+
+def _int(raw: str | None, default: int) -> int:
+    try:
+        return int((raw or "").strip() or default)
+    except ValueError:
+        return default
+
+
+def _optional_float(raw: str | None) -> float | None:
+    text = (raw or "").strip()
+    if not text:
+        return None
+    try:
+        return float(text)
+    except ValueError:
+        return None
 
 
 def _tts_speed(raw: str | None) -> float:

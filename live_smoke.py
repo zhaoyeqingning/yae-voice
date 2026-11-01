@@ -11,8 +11,8 @@ import httpx
 
 from player import FakePlayer
 from providers.config import load_settings
+from providers.factory import build_tts, tts_label
 from providers.openlux_llm import OpenluxLlm
-from providers.openlux_tts import OpenluxGeminiTts
 from providers.xfyun_asr import XfyunAsr
 from session import Session
 
@@ -67,15 +67,8 @@ async def run(text: str, audio_path: Path | None, out_pcm: Path | None) -> None:
         model=model,
         enable_thinking=settings.llm_enable_thinking,
     )
-    tts = OpenluxGeminiTts(
-        api_key=settings.llm_api_key,
-        base_url=settings.llm_base_url,
-        model=settings.tts_model,
-        voice=settings.tts_voice,
-        speed=settings.tts_speed,
-        instructions=settings.tts_instructions,
-    )
-    print(f"TTS model={settings.tts_model} voice={settings.tts_voice} speed={settings.tts_speed}")
+    tts = build_tts(settings)
+    print(f"TTS {tts_label(settings)}")
     player = FakePlayer()
     session = Session(asr, llm, tts, player, log_path=Path("runs/live_turns.jsonl"))
 
