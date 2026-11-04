@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 # 句末 + 分号/逗号；不做「满 N 字强制切」
-SENTENCE_ENDS = "。！？\n.?!；，,"
+SENTENCE_ENDS = "。！？\n .?!；，,"
 
 
 class Chunker:

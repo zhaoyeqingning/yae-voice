@@ -78,10 +78,42 @@ async def run_turn(
 
     async def produce() -> None:
         nonlocal user_text
+        # 检测 LLM 是否支持多模态音频输入（跳过 ASR）
+        multimodal = hasattr(llm, "stream_audio") and callable(getattr(llm, "stream_audio", None))
         try:
             if request.audio is not None:
-                user_text = await asr.transcribe(request.audio)
-                await emit_user(user_text)
+                if multimodal:
+                    # 多模态路径：音频直接送 LLM，跳过 ASR
+                    user_text = "(audio input)"
+                    await emit_user(user_text)
+                    timing.asr_done_at = time.perf_counter()
+                    if not is_current():
+                        return
+                    chunker = Chunker()
+                    async for delta in llm.stream_audio(  # type: ignore[attr-defined]
+                        list(request.history),
+                        request.audio,
+                        audio_sample_rate=16000,
+                        system_prompt=request.system_prompt,
+                    ):
+                        if not is_current():
+                            return
+                        assistant_parts.append(delta)
+                        await emit_text(delta)
+                        for piece in chunker.push(delta):
+                            if timing.first_chunk_at is None:
+                                timing.first_chunk_at = time.perf_counter()
+                            await speak_q.put(piece)
+                    if is_current():
+                        for piece in chunker.finish():
+                            if timing.first_chunk_at is None:
+                                timing.first_chunk_at = time.perf_counter()
+                            await speak_q.put(piece)
+                    return
+                else:
+                    # 传统路径：先 ASR 转文字，再送 LLM
+                    user_text = await asr.transcribe(request.audio)
+                    await emit_user(user_text)
             timing.asr_done_at = time.perf_counter()
             if not is_current():
                 return

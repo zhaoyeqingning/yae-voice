@@ -17,6 +17,8 @@ from pydantic import BaseModel, Field
 from session import Session
 from web_audio import pcm16_from_wav
 from web_hub import Hub, HubPlayer
+from dotenv import load_dotenv
+
 
 ROOT = Path(__file__).resolve().parent
 FRONTEND = ROOT / "frontend"
@@ -40,38 +42,24 @@ state = AppState()
 async def _build_live_session(player: HubPlayer, system_prompt: str) -> Session:
     from live_smoke import resolve_model
     from providers.config import load_settings
-    from providers.openlux_llm import OpenluxLlm
-    from providers.openlux_tts import OpenluxTts
-    from providers.xfyun_asr import XfyunAsr
+    from providers.factory import create_asr, create_llm, create_tts
 
     settings = load_settings()
     model = await resolve_model(
         settings.llm_base_url, settings.llm_api_key, settings.llm_model
     )
     print(
-        f"LLM model={model} TTS={settings.tts_model} voice={settings.tts_voice} speed={settings.tts_speed}",
+        f"LLM model={model} audio_mode={settings.llm_use_audio} "
+        f"TTS provider={settings.tts_provider} speed={settings.tts_speed}",
         flush=True,
     )
+    asr = create_asr(settings)
+    llm = create_llm(settings)
+    tts = create_tts(settings)
     return Session(
-        XfyunAsr(
-            app_id=settings.xfyun_app_id,
-            api_key=settings.xfyun_api_key,
-            api_secret=settings.xfyun_api_secret,
-        ),
-        OpenluxLlm(
-            base_url=settings.llm_base_url,
-            api_key=settings.llm_api_key,
-            model=model,
-            enable_thinking=settings.llm_enable_thinking,
-        ),
-        OpenluxTts(
-            api_key=settings.llm_api_key,
-            base_url=settings.llm_base_url,
-            model=settings.tts_model,
-            voice=settings.tts_voice,
-            speed=settings.tts_speed,
-            instructions=settings.tts_instructions,
-        ),
+        asr,
+        llm,
+        tts,
         player,
         log_path=ROOT / "runs" / "web_turns.jsonl",
         system_prompt=system_prompt,
@@ -97,9 +85,10 @@ def _build_fake_session(player: HubPlayer, system_prompt: str) -> Session:
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
+    load_dotenv(ROOT / ".env")
     system_prompt = os.getenv(
         "SYSTEM_PROMPT",
-        "你是 Evanescia，语气轻松自然，用简体中文短句回复，像面对面聊天。",
+        "你係Evanescia，阿禹，用粤语同人倾偈。回复要口语化、简短、自然，多用电语气词（啦、咯、咩、㗎、唔），用粤语惯用字词（唔该、点解、系、嘅、佢、喺、得唔得），唔好用书面语，唔好翻译腔，一句起两句止。带一点呼吸感和犹豫，不要字正腔圆、不要匀速朗读、不要太完美。",
     )
     player = HubPlayer(state.hub)
     use_fake = os.getenv("YAE_WEB_FAKE", "").strip().lower() in {"1", "true", "yes"}

@@ -39,6 +39,24 @@ class Llm(Protocol):
         """按增量吐出回复的字。system_prompt 由 Session 初始化时带入。"""
 
 
+class MultimodalLlm(Llm, Protocol):
+    """支持直接吃音频输入的多模态 LLM（跳过 ASR）。
+
+    实现此接口后，pipeline 会在输入是音频时自动跳过 ASR 步骤，
+    把 PCM 直接送给模型，降低一步延迟。
+    """
+
+    def stream_audio(
+        self,
+        history: list[dict[str, str]],
+        audio: bytes,
+        *,
+        audio_sample_rate: int = 16000,
+        system_prompt: str = "",
+    ) -> AsyncIterator[str]:
+        """直接吃音频 PCM，按增量吐出回复的字。"""
+
+
 class Tts(Protocol):
     async def synthesize(self, text: str) -> bytes:
         """一小段文字进去，16-bit 单声道 PCM 出来。"""

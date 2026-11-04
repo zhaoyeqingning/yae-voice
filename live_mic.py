@@ -26,9 +26,7 @@ from audio.vad import SAMPLE_RATE
 from audio.playback import SoundDevicePlayer
 from live_smoke import resolve_model
 from providers.config import load_settings
-from providers.openlux_llm import OpenluxLlm
-from providers.openlux_tts import OpenluxGeminiTts
-from providers.xfyun_asr import XfyunAsr
+from providers.factory import create_asr, create_llm, create_tts
 from session import Session
 
 # 16kHz * 16bit * 0.2s，短于这个的按键忽略
@@ -93,28 +91,12 @@ async def run_loop(*, turns: int, device: int | None, list_devices: bool) -> Non
 
     settings = load_settings()
     model = await resolve_model(settings.llm_base_url, settings.llm_api_key, settings.llm_model)
-    print(f"LLM model={model} thinking={settings.llm_enable_thinking}")
+    print(f"LLM model={model} thinking={settings.llm_enable_thinking} audio_mode={settings.llm_use_audio}")
 
-    asr = XfyunAsr(
-        app_id=settings.xfyun_app_id,
-        api_key=settings.xfyun_api_key,
-        api_secret=settings.xfyun_api_secret,
-    )
-    llm = OpenluxLlm(
-        base_url=settings.llm_base_url,
-        api_key=settings.llm_api_key,
-        model=model,
-        enable_thinking=settings.llm_enable_thinking,
-    )
-    tts = OpenluxGeminiTts(
-        api_key=settings.llm_api_key,
-        base_url=settings.llm_base_url,
-        model=settings.tts_model,
-        voice=settings.tts_voice,
-        speed=settings.tts_speed,
-        instructions=settings.tts_instructions,
-    )
-    print(f"TTS model={settings.tts_model} voice={settings.tts_voice} speed={settings.tts_speed}")
+    asr = create_asr(settings)
+    llm = create_llm(settings)
+    tts = create_tts(settings)
+    print(f"TTS provider={settings.tts_provider} speed={settings.tts_speed}")
     player = SoundDevicePlayer()
     session = Session(asr, llm, tts, player, log_path=Path("runs/live_mic_turns.jsonl"))
     selected = prefer_headset_input(device)

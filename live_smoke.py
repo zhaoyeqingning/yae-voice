@@ -11,9 +11,7 @@ import httpx
 
 from player import FakePlayer
 from providers.config import load_settings
-from providers.openlux_llm import OpenluxLlm
-from providers.openlux_tts import OpenluxGeminiTts
-from providers.xfyun_asr import XfyunAsr
+from providers.factory import create_asr, create_llm, create_tts
 from session import Session
 
 
@@ -54,34 +52,19 @@ def read_pcm16(path: Path) -> bytes:
 async def run(text: str, audio_path: Path | None, out_pcm: Path | None) -> None:
     settings = load_settings()
     model = await resolve_model(settings.llm_base_url, settings.llm_api_key, settings.llm_model)
-    print(f"LLM model={model} thinking={settings.llm_enable_thinking}")
+    print(f"LLM model={model} thinking={settings.llm_enable_thinking} audio={settings.llm_use_audio}")
+    print(f"TTS provider={settings.tts_provider}")
 
-    asr = XfyunAsr(
-        app_id=settings.xfyun_app_id,
-        api_key=settings.xfyun_api_key,
-        api_secret=settings.xfyun_api_secret,
-    )
-    llm = OpenluxLlm(
-        base_url=settings.llm_base_url,
-        api_key=settings.llm_api_key,
-        model=model,
-        enable_thinking=settings.llm_enable_thinking,
-    )
-    tts = OpenluxGeminiTts(
-        api_key=settings.llm_api_key,
-        base_url=settings.llm_base_url,
-        model=settings.tts_model,
-        voice=settings.tts_voice,
-        speed=settings.tts_speed,
-        instructions=settings.tts_instructions,
-    )
-    print(f"TTS model={settings.tts_model} voice={settings.tts_voice} speed={settings.tts_speed}")
+    asr = create_asr(settings)
+    llm = create_llm(settings)
+    tts = create_tts(settings)
+    print(f"TTS sample_rate={getattr(tts, 'sample_rate', 24000)}Hz")
     player = FakePlayer()
     session = Session(asr, llm, tts, player, log_path=Path("runs/live_turns.jsonl"))
 
     if audio_path is not None:
         pcm = read_pcm16(audio_path)
-        print(f"ASR 输入: {audio_path} ({len(pcm)} bytes)")
+        print(f"音频输入: {audio_path} ({len(pcm)} bytes)")
         await session.submit_audio(pcm)
     else:
         print(f"用户文本: {text}")
